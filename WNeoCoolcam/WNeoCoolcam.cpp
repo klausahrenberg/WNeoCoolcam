@@ -4,7 +4,7 @@
 
 
 #define APPLICATION "Neo Coolcam"
-#define VERSION "1.06"
+#define VERSION "1.07"
 #define DEBUG false
 
 WNetwork* network;
@@ -17,22 +17,12 @@ void setup() {
 	//Network
 	network = new WNetwork(DEBUG, APPLICATION, VERSION, true, NO_LED);
 	//Device
-	device = new WNeoCoolcam(DEBUG, network->getIdx(), network->getSettings());
+	device = new WNeoDevice(network);
 	network->addDevice(device);
 }
 
 void loop() {
-	unsigned long now = millis();
-	network->loop(now, false);
-	delay(100);
+	network->loop(millis());
+	delay(50);
 }
 
-void log(String debugMessage) {
-	if (DEBUG) {
-		Serial.println(debugMessage);
-	}
-}
-
-void logError(String errorMessage) {
-	log(errorMessage);
-}

@@ -60,27 +60,44 @@ static struct SwitchDevices supportedDevices [5] =
 
 class WNeoDevice: public WDevice {
 public:
-	WNeoDevice(boolean debug, String applicationName, WSettings* settings)
-	    	: WDevice(debug, "switch", applicationName, DEVICE_TYPE_ON_OFF_SWITCH) {
-		this->settings = settings;
+	WNeoDevice(WNetwork* network)
+	    	: WDevice(network, "switch", "switch", DEVICE_TYPE_ON_OFF_SWITCH) {
 		this->providingConfigPage = true;
-		this->deviceType = settings->registerByte("deviceType", 0);
-		this->deviceMode = settings->registerByte("deviceMode", 0);
+		this->deviceType = network->getSettings()->registerByte("deviceType", 0);
+		this->deviceMode = network->getSettings()->registerByte("deviceMode", 0);
 		//StatusLed
 		if (supportedDevices[getDeviceType()].statusLed != NO_PIN) {
-			this->statusLed = new WLed(debug, supportedDevices[getDeviceType()].statusLed);
+			this->statusLed = new WLed(supportedDevices[getDeviceType()].statusLed);
 		}
 		WOnOffProperty* onOffProperty = nullptr;
 		for (int i = 0; i < COUNT_MAX_RELAIS; i++) {
 			if (supportedDevices[getDeviceType()].relayPins[i] != NO_PIN) {
 				//Property
-				onOffProperty = new WOnOffProperty("on" + (i > 0 ? String(i + 1) : ""), "Switch" + (i > 0 ? " " + String(i + 1) : ""), "Whether the switch is turned on");
+				WStringStream pid(3, true);
+				pid.print("on");
+				WStringStream pname(8, true);
+				pname.print("Switch");
+				WStringStream rid(6, true);
+				rid.print("relay");
+				WStringStream rname(7, true);
+				rname.print("Relay");
+				if (i > 0) {
+					char buffer[1];
+					itoa(i, buffer, 10);
+					pid.print(buffer);
+					pname.print(" ");
+					pname.print(buffer);
+					rid.print(buffer);
+					rname.print(" ");
+					rname.print(buffer);
+				}
+				onOffProperty = new WOnOffProperty(pid.c_str(), pname.c_str());
 				this->addProperty(onOffProperty);
 				if (getDeviceMode() != MODE_NO_RELAY_USAGE) {
 					//Relay
-					WRelay* relay = new WRelay(debug, supportedDevices[getDeviceType()].relayPins[i], true);
+					WRelay* relay = new WRelay(supportedDevices[getDeviceType()].relayPins[i], true);
 					if (getDeviceMode() == MODE_SEPARATE_RELAY_PROPERTY) {
-						WOnOffProperty* relayProperty = new WOnOffProperty("relay" + (i > 0 ? String(i + 1) : ""), "Relay" + (i > 0 ? " " + String(i + 1) : ""), "Whether the relay is turned on");
+						WOnOffProperty* relayProperty = new WOnOffProperty(rid.c_str(), rname.c_str());
 						this->addProperty(relayProperty);
 						relay->setProperty(relayProperty);
 					} else {
@@ -92,32 +109,39 @@ public:
 			if ((supportedDevices[getDeviceType()].switchPins[i] != NO_PIN) && (onOffProperty != nullptr)) {
 				//Button
 				//If more buttons than relais, than assign all buttons to last relay, e.g. SonoffBasic
-				WSwitch* button = new WSwitch(debug, supportedDevices[getDeviceType()].switchPins[i], supportedDevices[getDeviceType()].switchModes[i]);
+				WSwitch* button = new WSwitch(supportedDevices[getDeviceType()].switchPins[i], supportedDevices[getDeviceType()].switchModes[i]);
 				button->setProperty(onOffProperty);
 				this->addPin(button);
 			}
 
-
 		}
 	}
 
-	virtual String getConfigPage() {
-		log("neo config page");
-	   	String page = FPSTR(HTTP_CONFIG_PAGE);
-	   	page.replace("{di}", getId());
-	   	for (int i = 0; i < COUNT_DEVICE_TYPES; i++) {
-	   		page.replace("{" + String(i) + "}", (getDeviceType() == i ? "selected" : ""));
-	   	}
-	   	for (int i = 0; i < COUNT_DEVICE_MODES; i++) {
-	   		page.replace("{m" + String(i) + "}", (getDeviceMode() == i ? "selected" : ""));
-	   	}
-		return page;
+	virtual void printConfigPage(WStringStream* page) {
+	    network->log()->notice(F("NeoDevice config page"));
+    	page->printAndReplace(FPSTR(HTTP_CONFIG_PAGE_BEGIN), getId());
+    	//deviceType
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Model:", "dt");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceType() == 0 ? "selected" : ""), "Neo Coolcam");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceType() == 1 ? "selected" : ""), "Sonoff Mini");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 1 ? "selected" : ""), "Sonoff Basic");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 1 ? "selected" : ""), "Sonoff 4-channel");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "4", (getDeviceType() == 1 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
+    	page->print(FPSTR(HTTP_COMBOBOX_END));
+    	//deviceMode
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Device Mode:", "dm");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceType() == 0 ? "selected" : ""), "Button switches relay on or off");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceType() == 1 ? "selected" : ""), "Separate relay property. Button doesn't switch relay.");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 1 ? "selected" : ""), "No relay usage. Only button usage.");
+    	page->print(FPSTR(HTTP_COMBOBOX_END));
+
+    	page->print(FPSTR(HTTP_CONFIG_SAVE_BUTTON));
 	}
 
-	void saveConfigPage(AsyncWebServerRequest *request) {
-		log("save config page");
-		this->deviceType->setByte(request->arg("dt").toInt());
-		this->deviceMode->setByte(request->arg("dm").toInt());
+	void saveConfigPage(ESP8266WebServer* webServer) {
+	    network->log()->notice(F("Save NeoDevice config page"));
+		this->deviceType->setByte(webServer->arg("dt").toInt());
+		this->deviceMode->setByte(webServer->arg("dm").toInt());
 	}
 
 protected:
@@ -131,7 +155,6 @@ protected:
 	}
 
 private:
-	WSettings* settings;
 	WProperty* deviceType;
 	WProperty* deviceMode;
 

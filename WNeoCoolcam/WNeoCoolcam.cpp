@@ -4,7 +4,7 @@
 
 
 #define APPLICATION "Neo Coolcam"
-#define VERSION "1.07"
+#define VERSION "0.99.c"
 #define DEBUG false
 
 WNetwork* network;

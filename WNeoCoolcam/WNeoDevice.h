@@ -5,30 +5,7 @@
 #include "../../WAdapter/Wadapter/WSwitch.h"
 #include "../../WAdapter/Wadapter/WRelay.h"
 #include "../../WAdapter/Wadapter/WProperty.h"
-
-const static char HTTP_CONFIG_PAGE[]         PROGMEM = R"=====(
-<form method='get' action='saveDeviceConfiguration_{di}'>
-        	<div>
-        		<select name="dt">        		
-					<option value="0" {0}>Neo Coolcam</option>
-					<option value="1" {1}>Sonoff Mini</option>
-                    <option value="2" {2}>Sonoff Basic</option>
-                    <option value="3" {3}>Sonoff 4-channel</option>
-                    <option value="4" {4}>Wemos: Relay at D1, Switch at D3</option>			
-				</select>
-        	</div>
-		<div>
-        	<select name="dm">        		
-				<option value="0" {m0}>Button switches relay on or off</option>
-				<option value="1" {m1}>Separate relay property. Button doesn't switch relay.</option>
-                <option value="2" {m2}>No relay usage. Only button usage.</option>			
-			</select>
-        </div>
-		<div>
-			<button type='submit'>Save configuration</button>
-		</div>
-</form>
-)=====";
+#include "W2812Led.h"
 
 #define COUNT_DEVICE_TYPES 5
 #define COUNT_DEVICE_MODES 3
@@ -40,6 +17,7 @@ const static char HTTP_CONFIG_PAGE[]         PROGMEM = R"=====(
 
 #define PIN_SDA 3 //RX // green
 #define PIN_SCL 1 //TX // yellow
+#define PIN_W2812 4
 
 struct SwitchDevices{
 	byte statusLed;
@@ -63,13 +41,20 @@ public:
 	WNeoDevice(WNetwork* network)
 	    	: WDevice(network, "switch", "switch", DEVICE_TYPE_ON_OFF_SWITCH) {
 		this->providingConfigPage = true;
-		this->deviceType = network->getSettings()->registerByte("deviceType", 0);
-		this->deviceMode = network->getSettings()->registerByte("deviceMode", 0);
+		this->deviceType = network->getSettings()->setByte("deviceType", 0);
+		this->deviceMode = network->getSettings()->setByte("deviceMode", 0);
+		this->supportingW2812 = network->getSettings()->setBoolean("supportingW2812", false);
+		this->ledProgram = network->getSettings()->setByte("ledProgram", 0);
+		this->ledProgram->addEnumByte(0);
+		this->ledProgram->addEnumByte(1);
+		this->ledProgram->addEnumByte(2);
+		this->ledProgram->addEnumByte(3);
+		mainLedRelay = nullptr;
+		onOffProperty = nullptr;
 		//StatusLed
 		if (supportedDevices[getDeviceType()].statusLed != NO_PIN) {
 			this->statusLed = new WLed(supportedDevices[getDeviceType()].statusLed);
 		}
-		WOnOffProperty* onOffProperty = nullptr;
 		for (int i = 0; i < COUNT_MAX_RELAIS; i++) {
 			if (supportedDevices[getDeviceType()].relayPins[i] != NO_PIN) {
 				//Property
@@ -96,7 +81,10 @@ public:
 				if (getDeviceMode() != MODE_NO_RELAY_USAGE) {
 					//Relay
 					WRelay* relay = new WRelay(supportedDevices[getDeviceType()].relayPins[i], true);
-					if (getDeviceMode() == MODE_SEPARATE_RELAY_PROPERTY) {
+					if (isSupportingW8212()) {
+						mainLedRelay = new WOnOffProperty(rid.c_str(), rname.c_str());
+						relay->setProperty(mainLedRelay);
+					} else if (getDeviceMode() == MODE_SEPARATE_RELAY_PROPERTY) {
 						WOnOffProperty* relayProperty = new WOnOffProperty(rid.c_str(), rname.c_str());
 						this->addProperty(relayProperty);
 						relay->setProperty(relayProperty);
@@ -115,6 +103,44 @@ public:
 			}
 
 		}
+		if (isSupportingW8212()) {
+			ledStrip = new W2812Led(network, PIN_W2812, 80);
+			ledStrip->setLedProgram(ledProgram->getByte() - 1);
+			this->addPin(ledStrip);
+			this->addProperty(ledProgram);
+			this->addProperty(ledStrip->getColor());
+			this->addProperty(ledStrip->getBrightness());
+			onOffProperty->setOnChange([this](WProperty* property){
+				switch (ledProgram->getByte()) {
+				case 0:
+					if (mainLedRelay != nullptr) {
+						mainLedRelay->setBoolean(onOffProperty->getBoolean());
+					}
+					break;
+				default:
+					ledStrip->setLedProgram(ledProgram->getByte() - 1);
+					ledStrip->setOn(onOffProperty->getBoolean());
+				}
+			});
+			ledProgram->setOnChange([this](WProperty* property){
+				if (onOffProperty->getBoolean()) {
+					switch (ledProgram->getByte()) {
+					case 0:
+						ledStrip->setOn(false);
+						if (mainLedRelay != nullptr) {
+							mainLedRelay->setBoolean(true);
+						}
+						break;
+					default:
+						if (mainLedRelay != nullptr) {
+							mainLedRelay->setBoolean(false);
+						}
+						ledStrip->setLedProgram(ledProgram->getByte() - 1);
+						ledStrip->setOn(true);
+					}
+				}
+			});
+		}
 	}
 
 	virtual void printConfigPage(WStringStream* page) {
@@ -124,16 +150,18 @@ public:
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Model:", "dt");
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceType() == 0 ? "selected" : ""), "Neo Coolcam");
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceType() == 1 ? "selected" : ""), "Sonoff Mini");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 1 ? "selected" : ""), "Sonoff Basic");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 1 ? "selected" : ""), "Sonoff 4-channel");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "4", (getDeviceType() == 1 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 2 ? "selected" : ""), "Sonoff Basic");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Sonoff 4-channel");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "4", (getDeviceType() == 4 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
     	//deviceMode
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Device Mode:", "dm");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceType() == 0 ? "selected" : ""), "Button switches relay on or off");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceType() == 1 ? "selected" : ""), "Separate relay property. Button doesn't switch relay.");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 1 ? "selected" : ""), "No relay usage. Only button usage.");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceMode() == 0 ? "selected" : ""), "Button switches relay on or off");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceMode() == 1 ? "selected" : ""), "Separate relay property. Button doesn't switch relay.");
+    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceMode() == 2 ? "selected" : ""), "No relay usage. Only button usage.");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
+    	//supportingW2812
+    	page->printAndReplace(FPSTR(HTTP_CHECKBOX), "sw", (this->isSupportingW8212() ? "checked" : ""), "Supports LED strip at GPIO04");
 
     	page->print(FPSTR(HTTP_CONFIG_SAVE_BUTTON));
 	}
@@ -142,6 +170,7 @@ public:
 	    network->log()->notice(F("Save NeoDevice config page"));
 		this->deviceType->setByte(webServer->arg("dt").toInt());
 		this->deviceMode->setByte(webServer->arg("dm").toInt());
+		this->supportingW2812->setBoolean(webServer->arg("sw") == "true");
 	}
 
 protected:
@@ -154,10 +183,18 @@ protected:
 		return this->deviceMode->getByte();
 	}
 
+	bool isSupportingW8212() {
+		return supportingW2812->getBoolean();
+	}
+
 private:
 	WProperty* deviceType;
 	WProperty* deviceMode;
-
+	WProperty* supportingW2812;
+	WProperty* ledProgram;
+	W2812Led* ledStrip;
+	WOnOffProperty* onOffProperty;
+	WOnOffProperty* mainLedRelay;
 };
 
 

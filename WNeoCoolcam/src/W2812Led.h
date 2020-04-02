@@ -1,8 +1,8 @@
 #ifndef W_2812_LED_H
 #define W_2812_LED_H
 
-#include <Adafruit_NeoPixel.h>
-#include "../../WAdapter/Wadapter/WPin.h"
+#include "Adafruit_NeoPixel.h"
+#include "WPin.h"
 
 const int COUNT_LED_PROGRAMS = 3;
 const float PI180 = 0.01745329;

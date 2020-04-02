@@ -1,10 +1,10 @@
 #ifndef W_NEO_COOLCAM_H
 #define W_NEO_COOLCAM_H
 
-#include "../../WAdapter/Wadapter/WDevice.h"
-#include "../../WAdapter/Wadapter/WSwitch.h"
-#include "../../WAdapter/Wadapter/WRelay.h"
-#include "../../WAdapter/Wadapter/WProperty.h"
+#include "WDevice.h"
+#include "WSwitch.h"
+#include "WRelay.h"
+#include "WProperty.h"
 #include "W2812Led.h"
 
 #define COUNT_DEVICE_TYPES 5

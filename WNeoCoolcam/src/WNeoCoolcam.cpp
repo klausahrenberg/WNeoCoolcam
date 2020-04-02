@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "../../WAdapter/Wadapter/WNetwork.h"
+#include "WNetwork.h"
 #include "WNeoDevice.h"
 
 
@@ -25,4 +25,3 @@ void loop() {
 	network->loop(millis());
 	delay(50);
 }
-

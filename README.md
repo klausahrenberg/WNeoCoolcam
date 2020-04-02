@@ -44,7 +44,7 @@ Firmware provides different json messages:
 }
 ```
 ## Modifying parameters via MQTT
-Send a complete json structure with changed parameters to `<your_mqtt_topic>/thermostat/<your_set_topic>`, e.g. `neocoolcam/switch/set`. Alternatively you can set single values, modify the topic to `<your_mqtt_topic>/thermostat/<your_set_topic>/<parameter>`, e.g. `neocoolcam/switch/set/on`. The payload contains the new value. 
+Send a complete json structure with changed parameters to `<your_mqtt_topic>/switch/<your_set_topic>`, e.g. `neocoolcam/switch/set`. Alternatively you can set single values, modify the topic to `<your_mqtt_topic>/switch/<your_set_topic>/<parameter>`, e.g. `neocoolcam/switch/set/on`. The payload contains the new value. 
 
 ### Build this firmware from source
 For build from sources you can use the Arduino-IDE, Atom IDE or other. All sources needed are inside the folder 'WNeoCoolcam' and my other library: https://github.com/klausahrenberg/WAdapter. Additionally you will need some other libraries: DNSServer, EEPROM (for esp8266), ESP8266HTTPClient, ESP8266mDNS, ESP8266WebServer, ESP8266WiFi, Hash, NTPClient, Time - It's all available via board and library manager inside of ArduinoIDE

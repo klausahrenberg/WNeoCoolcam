@@ -40,7 +40,7 @@ class WNeoDevice: public WDevice {
 public:
 	WNeoDevice(WNetwork* network)
 	    	: WDevice(network, "switch", "switch", DEVICE_TYPE_ON_OFF_SWITCH) {
-		this->providingConfigPage = true;
+
 		this->deviceType = network->getSettings()->setByte("deviceType", 0);
 		this->deviceMode = network->getSettings()->setByte("deviceMode", 0);
 		this->supportingW2812 = network->getSettings()->setBoolean("supportingW2812", false);
@@ -51,6 +51,17 @@ public:
 		this->ledProgram->addEnumByte(3);
 		mainLedRelay = nullptr;
 		onOffProperty = nullptr;
+
+		this->showAsWebthingDevice = network->getSettings()->setBoolean("showAsWebthingDevice", true);
+    this->showAsWebthingDevice->setReadOnly(true);
+		this->showAsWebthingDevice->setVisibility(NONE);
+		this->addProperty(showAsWebthingDevice);
+    this->setVisibility(this->showAsWebthingDevice->getBoolean() ? ALL : MQTT);
+		//HtmlPages
+    WPage* configPage = new WPage(this->getId(), "Configure switch");
+    configPage->setPrintPage(std::bind(&WNeoDevice::printConfigPage, this, std::placeholders::_1, std::placeholders::_2));
+    configPage->setSubmittedPage(std::bind(&WNeoDevice::saveConfigPage, this, std::placeholders::_1, std::placeholders::_2));
+    network->addCustomPage(configPage);
 		//StatusLed
 		if (supportedDevices[getDeviceType()].statusLed != NO_PIN) {
 			this->statusLed = new WLed(supportedDevices[getDeviceType()].statusLed);
@@ -125,7 +136,7 @@ public:
 		}
 	}
 
-	virtual void printConfigPage(WStringStream* page) {
+	virtual void printConfigPage(ESP8266WebServer* webServer, WStringStream* page) {
 	    network->notice(F("NeoDevice config page"));
     	page->printAndReplace(FPSTR(HTTP_CONFIG_PAGE_BEGIN), getId());
     	//deviceType
@@ -142,14 +153,17 @@ public:
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceMode() == 1 ? "selected" : ""), "Separate relay property. Button doesn't switch relay.");
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceMode() == 2 ? "selected" : ""), "No relay usage. Only button usage.");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
+			//showAsWebthingDevice
+			page->printAndReplace(FPSTR(HTTP_CHECKBOX_OPTION), "sa", "sa", (showAsWebthingDevice->getBoolean() ? HTTP_CHECKED : ""), "", "Show as Mozilla Webthing device");
     	//supportingW2812
     	page->printAndReplace(FPSTR(HTTP_CHECKBOX), "sw", (this->isSupportingW8212() ? "checked" : ""), "Supports LED strip at GPIO04");
 
     	page->print(FPSTR(HTTP_CONFIG_SAVE_BUTTON));
 	}
 
-	void saveConfigPage(ESP8266WebServer* webServer) {
+	void saveConfigPage(ESP8266WebServer* webServer, WStringStream* page) {
 	  network->notice(F("Save NeoDevice config page"));
+		this->showAsWebthingDevice->setBoolean(webServer->arg("sa") == HTTP_TRUE);
 		this->deviceType->setByte(webServer->arg("dt").toInt());
 		this->deviceMode->setByte(webServer->arg("dm").toInt());
 		this->supportingW2812->setBoolean(webServer->arg("sw") == "true");
@@ -177,6 +191,7 @@ private:
 	W2812Led* ledStrip;
 	WProperty* onOffProperty;
 	WProperty* mainLedRelay;
+	WProperty* showAsWebthingDevice;
 };
 
 

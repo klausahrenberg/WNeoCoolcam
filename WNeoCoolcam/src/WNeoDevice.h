@@ -26,14 +26,14 @@ struct SwitchDevices{
     byte switchModes[COUNT_MAX_RELAIS];
 };
 
-static struct SwitchDevices supportedDevices [4] =
+static struct SwitchDevices supportedDevices [5] =
 {
-//LED  RELAY		                 SWITCHES
- { 4, {12, NO_PIN, NO_PIN, NO_PIN}, {13, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Neo Coolcam
- {13, {12, NO_PIN, NO_PIN, NO_PIN}, { 0,      4, NO_PIN, NO_PIN}, {MODE_BUTTON, MODE_SWITCH, NO_PIN, NO_PIN}}, //Sonoff Mini
- {13, {12, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Sonoff Basic
- //{13, {12,      5,      4,     15}, { 0,      9,     10,     14}, {MODE_BUTTON, MODE_BUTTON, MODE_BUTTON, MODE_BUTTON}}, //Sonoff 4-channel
- { 2, { 5, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}} //Wemos: Relay at D1, Switch at D3
+	//LED  RELAY		                 SWITCHES
+ 	{ 4, {12, NO_PIN, NO_PIN, NO_PIN}, {13, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Neo Coolcam
+ 	{13, {12, NO_PIN, NO_PIN, NO_PIN}, { 0,      4, NO_PIN, NO_PIN}, {MODE_BUTTON, MODE_SWITCH, NO_PIN, NO_PIN}}, //Sonoff Mini
+ 	{13, {12, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Sonoff Basic
+ 	{ 2, { 5, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Wemos: Relay at D1, Switch at D3
+ 	{ 2, { 5,      4, NO_PIN, NO_PIN}, {NO_PIN, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}} //Dimmable LED
 };
 
 class WNeoDevice: public WDevice {
@@ -68,17 +68,31 @@ public:
 		}
 		for (int i = 0; i < COUNT_MAX_RELAIS; i++) {
 			if (supportedDevices[getDeviceType()].relayPins[i] != NO_PIN) {
+				String pN = "on";
+				String pD = "Switch";
+				if (i > 0) {
+					pN.concat(i + 1);
+					pD.concat(" ");
+					pD.concat(i + 1);
+				}
 				//Property
-				onOffProperty = WProperty::createOnOffProperty("on", "Switch");
+				onOffProperty = WProperty::createOnOffProperty(pN.c_str(), pD.c_str());
 				this->addProperty(onOffProperty);
 				if (getDeviceMode() != MODE_NO_RELAY_USAGE) {
 					//Relay
+					pN = "relay";
+					pD = "Relay";
+					if (i > 0) {
+						pN.concat(i + 1);
+						pD.concat(" ");
+						pD.concat(i + 1);
+					}
 					WRelay* relay = new WRelay(supportedDevices[getDeviceType()].relayPins[i], true);
 					if (isSupportingW8212()) {
-						mainLedRelay = WProperty::createOnOffProperty("relay", "Relay");
+						mainLedRelay = WProperty::createOnOffProperty(pN.c_str(), pD.c_str());
 						relay->setProperty(mainLedRelay);
 					} else if (getDeviceMode() == MODE_SEPARATE_RELAY_PROPERTY) {
-						WProperty* relayProperty = WProperty::createOnOffProperty("relay", "Relay");
+						WProperty* relayProperty = WProperty::createOnOffProperty(pN.c_str(), pD.c_str());
 						this->addProperty(relayProperty);
 						relay->setProperty(relayProperty);
 					} else {
@@ -146,6 +160,7 @@ public:
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 2 ? "selected" : ""), "Sonoff Basic");
     	//page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Sonoff 4-channel");
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
+			page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "4", (getDeviceType() == 4 ? "selected" : ""), "Dimmable LED: Relay 1 at Pin 5, Relay 2 at Pin 4, Switch at Pin 12");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
     	//deviceMode
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Device Mode:", "dm");
@@ -167,6 +182,10 @@ public:
 		this->deviceType->setByte(webServer->arg("dt").toInt());
 		this->deviceMode->setByte(webServer->arg("dm").toInt());
 		this->supportingW2812->setBoolean(webServer->arg("sw") == "true");
+	}
+
+	virtual void loop(unsigned long now) {
+		WDevice::loop(now);
 	}
 
 protected:

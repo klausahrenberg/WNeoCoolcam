@@ -7,6 +7,10 @@
 #include "WProperty.h"
 #include "W2812Led.h"
 
+#ifndef _BV
+#define _BV(bit) (1 << (bit))
+#endif
+
 #define COUNT_DEVICE_TYPES 4
 #define COUNT_DEVICE_MODES 3
 #define COUNT_MAX_RELAIS 4
@@ -32,8 +36,7 @@ static struct SwitchDevices supportedDevices [5] =
  	{ 4, {12, NO_PIN, NO_PIN, NO_PIN}, {13, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Neo Coolcam
  	{13, {12, NO_PIN, NO_PIN, NO_PIN}, { 0,      4, NO_PIN, NO_PIN}, {MODE_BUTTON, MODE_SWITCH, NO_PIN, NO_PIN}}, //Sonoff Mini
  	{13, {12, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Sonoff Basic
- 	{ 2, { 5, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}}, //Wemos: Relay at D1, Switch at D3
- 	{ 2, { 5,      4, NO_PIN, NO_PIN}, {NO_PIN, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}} //Dimmable LED
+ 	{ 2, { 5, NO_PIN, NO_PIN, NO_PIN}, { 0, NO_PIN, NO_PIN, NO_PIN}, {MODE_BUTTON, NO_PIN, NO_PIN, NO_PIN}} //Wemos: Relay at D1, Switch at D3
 };
 
 class WNeoDevice: public WDevice {
@@ -150,7 +153,7 @@ public:
 		}
 	}
 
-	virtual void printConfigPage(ESP8266WebServer* webServer, WStringStream* page) {
+	virtual void printConfigPage(AsyncWebServerRequest* request, WStringStream* page) {
 	    network->notice(F("NeoDevice config page"));
     	page->printAndReplace(FPSTR(HTTP_CONFIG_PAGE_BEGIN), getId());
     	//deviceType
@@ -160,7 +163,6 @@ public:
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 2 ? "selected" : ""), "Sonoff Basic");
     	//page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Sonoff 4-channel");
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
-			page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "4", (getDeviceType() == 4 ? "selected" : ""), "Dimmable LED: Relay 1 at Pin 5, Relay 2 at Pin 4, Switch at Pin 12");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
     	//deviceMode
     	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Device Mode:", "dm");
@@ -176,16 +178,12 @@ public:
     	page->print(FPSTR(HTTP_CONFIG_SAVE_BUTTON));
 	}
 
-	void saveConfigPage(ESP8266WebServer* webServer, WStringStream* page) {
+	void saveConfigPage(AsyncWebServerRequest* request, WStringStream* page) {
 	  network->notice(F("Save NeoDevice config page"));
-		this->showAsWebthingDevice->setBoolean(webServer->arg("sa") == HTTP_TRUE);
-		this->deviceType->setByte(webServer->arg("dt").toInt());
-		this->deviceMode->setByte(webServer->arg("dm").toInt());
-		this->supportingW2812->setBoolean(webServer->arg("sw") == "true");
-	}
-
-	virtual void loop(unsigned long now) {
-		WDevice::loop(now);
+		this->showAsWebthingDevice->setBoolean(request->arg("sa") == HTTP_TRUE);
+		this->deviceType->setByte(request->arg("dt").toInt());
+		this->deviceMode->setByte(request->arg("dm").toInt());
+		this->supportingW2812->setBoolean(request->arg("sw") == "true");
 	}
 
 protected:

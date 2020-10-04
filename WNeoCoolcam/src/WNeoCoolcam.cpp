@@ -4,7 +4,7 @@
 
 
 #define APPLICATION "Neo Coolcam"
-#define VERSION "1.15"
+#define VERSION "1.18"
 #define FLAG_SETTINGS 0x17
 #define DEBUG false
 

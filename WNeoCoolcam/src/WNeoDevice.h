@@ -153,32 +153,32 @@ public:
 		}
 	}
 
-	virtual void printConfigPage(AsyncWebServerRequest* request, WStringStream* page) {
+	virtual void printConfigPage(AsyncWebServerRequest* request, Print* page) {
 	    network->notice(F("NeoDevice config page"));
-    	page->printAndReplace(FPSTR(HTTP_CONFIG_PAGE_BEGIN), getId());
+    	page->printf(HTTP_CONFIG_PAGE_BEGIN, getId());
     	//deviceType
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Model:", "dt");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceType() == 0 ? "selected" : ""), "Neo Coolcam");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceType() == 1 ? "selected" : ""), "Sonoff Mini");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceType() == 2 ? "selected" : ""), "Sonoff Basic");
-    	//page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Sonoff 4-channel");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "3", (getDeviceType() == 3 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
+    	page->printf(HTTP_COMBOBOX_BEGIN, "Model:", "dt");
+    	page->printf(HTTP_COMBOBOX_ITEM, "0", (getDeviceType() == 0 ? "selected" : ""), "Neo Coolcam");
+    	page->printf(HTTP_COMBOBOX_ITEM, "1", (getDeviceType() == 1 ? "selected" : ""), "Sonoff Mini");
+    	page->printf(HTTP_COMBOBOX_ITEM, "2", (getDeviceType() == 2 ? "selected" : ""), "Sonoff Basic");
+    	//page->printf(HTTP_COMBOBOX_ITEM, "3", (getDeviceType() == 3 ? "selected" : ""), "Sonoff 4-channel");
+    	page->printf(HTTP_COMBOBOX_ITEM, "3", (getDeviceType() == 3 ? "selected" : ""), "Wemos: Relay at D1, Switch at D3");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
     	//deviceMode
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_BEGIN), "Device Mode:", "dm");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "0", (getDeviceMode() == 0 ? "selected" : ""), "Button switches relay on or off");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "1", (getDeviceMode() == 1 ? "selected" : ""), "Separate relay property. Button doesn't switch relay.");
-    	page->printAndReplace(FPSTR(HTTP_COMBOBOX_ITEM), "2", (getDeviceMode() == 2 ? "selected" : ""), "No relay usage. Only button usage.");
+    	page->printf(HTTP_COMBOBOX_BEGIN, "Device Mode:", "dm");
+    	page->printf(HTTP_COMBOBOX_ITEM, "0", (getDeviceMode() == 0 ? "selected" : ""), "Button switches relay on or off");
+    	page->printf(HTTP_COMBOBOX_ITEM, "1", (getDeviceMode() == 1 ? "selected" : ""), "Separate relay property. Button doesn't switch relay.");
+    	page->printf(HTTP_COMBOBOX_ITEM, "2", (getDeviceMode() == 2 ? "selected" : ""), "No relay usage. Only button usage.");
     	page->print(FPSTR(HTTP_COMBOBOX_END));
 			//showAsWebthingDevice
-			page->printAndReplace(FPSTR(HTTP_CHECKBOX_OPTION), "sa", "sa", (showAsWebthingDevice->getBoolean() ? HTTP_CHECKED : ""), "", "Show as Mozilla Webthing device");
+			page->printf(HTTP_CHECKBOX_OPTION, "sa", "sa", (showAsWebthingDevice->getBoolean() ? HTTP_CHECKED : ""), "", "Show as Mozilla Webthing device");
     	//supportingW2812
-    	page->printAndReplace(FPSTR(HTTP_CHECKBOX), "sw", (this->isSupportingW8212() ? "checked" : ""), "Supports LED strip at GPIO04");
+    	page->printf(HTTP_CHECKBOX, "sw", (this->isSupportingW8212() ? "checked" : ""), "Supports LED strip at GPIO04");
 
     	page->print(FPSTR(HTTP_CONFIG_SAVE_BUTTON));
 	}
 
-	void saveConfigPage(AsyncWebServerRequest* request, WStringStream* page) {
+	void saveConfigPage(AsyncWebServerRequest* request, Print* page) {
 	  network->notice(F("Save NeoDevice config page"));
 		this->showAsWebthingDevice->setBoolean(request->arg("sa") == HTTP_TRUE);
 		this->deviceType->setByte(request->arg("dt").toInt());

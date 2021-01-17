@@ -67,7 +67,7 @@ public:
     network->addCustomPage(configPage);
 		//StatusLed
 		if (supportedDevices[getDeviceType()].statusLed != NO_PIN) {
-			this->statusLed = new WLed(supportedDevices[getDeviceType()].statusLed);
+			network->setStatusLedPin(supportedDevices[getDeviceType()].statusLed);
 		}
 		for (int i = 0; i < COUNT_MAX_RELAIS; i++) {
 			if (supportedDevices[getDeviceType()].relayPins[i] != NO_PIN) {
@@ -81,6 +81,17 @@ public:
 				//Property
 				onOffProperty = WProperty::createOnOffProperty(pN.c_str(), pD.c_str());
 				this->addProperty(onOffProperty);
+				//toggle property
+				pN = "trigger";
+				pD = "Trigger";
+				if (i > 0) {
+					pN.concat(i + 1);
+					pD.concat(" ");
+					pD.concat(i + 1);
+				}
+				triggerProperty = WProperty::createOnOffProperty(pN.c_str(), pD.c_str());
+				triggerProperty->setVisibility(MQTT);
+				this->addProperty(triggerProperty);
 				if (getDeviceMode() != MODE_NO_RELAY_USAGE) {
 					//Relay
 					pN = "relay";
@@ -109,6 +120,7 @@ public:
 				//If more buttons than relais, than assign all buttons to last relay, e.g. SonoffBasic
 				WSwitch* button = new WSwitch(supportedDevices[getDeviceType()].switchPins[i], supportedDevices[getDeviceType()].switchModes[i]);
 				button->setProperty(onOffProperty);
+				button->setTriggerProperty(triggerProperty);
 				this->addPin(button);
 			}
 
@@ -207,6 +219,7 @@ private:
 	WProperty* ledProgram;
 	W2812Led* ledStrip;
 	WProperty* onOffProperty;
+	WProperty* triggerProperty;
 	WProperty* mainLedRelay;
 	WProperty* showAsWebthingDevice;
 };

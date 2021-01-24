@@ -16,7 +16,7 @@ void setup() {
 		Serial.begin(9600);
 	}
 	//Network
-	network = new WNetwork(DEBUG, APPLICATION, VERSION, true, NO_LED, FLAG_SETTINGS);
+	network = new WNetwork(DEBUG, APPLICATION, VERSION, NO_LED, FLAG_SETTINGS);
 	//Device
 	device = new WNeoDevice(network);
 	network->addDevice(device);

@@ -25,9 +25,9 @@
 
 struct SwitchDevices{
 	byte statusLed;
-    byte relayPins[COUNT_MAX_RELAIS];
-    byte switchPins[COUNT_MAX_RELAIS];
-    byte switchModes[COUNT_MAX_RELAIS];
+  byte relayPins[COUNT_MAX_RELAIS];
+  byte switchPins[COUNT_MAX_RELAIS];
+  byte switchModes[COUNT_MAX_RELAIS];
 };
 
 static struct SwitchDevices supportedDevices [5] =
@@ -67,7 +67,7 @@ public:
     network->addCustomPage(configPage);
 		//StatusLed
 		if (supportedDevices[getDeviceType()].statusLed != NO_PIN) {
-			network->setStatusLedPin(supportedDevices[getDeviceType()].statusLed);
+			network->setStatusLedPin(supportedDevices[getDeviceType()].statusLed, false);
 		}
 		for (int i = 0; i < COUNT_MAX_RELAIS; i++) {
 			if (supportedDevices[getDeviceType()].relayPins[i] != NO_PIN) {

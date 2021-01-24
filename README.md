@@ -1,4 +1,7 @@
 # WNeoCoolcam
+
+[![GitHub version](https://img.shields.io/github/release/klausahrenberg/WNeoCoolcam.svg)](https://github.com/klausahrenberg/WNeoCoolcam/releases/latest)
+
 Replaces original Tuya firmware on NeoCoolcam or Sonoff devices with ESP8266 wifi module. The firmware is tested with following devices:
 * Neo Coolcam
 * Sonoff Mini
